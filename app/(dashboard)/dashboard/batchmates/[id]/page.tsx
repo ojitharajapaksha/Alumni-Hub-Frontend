@@ -52,7 +52,7 @@ export default function BatchmateDetailPage({ params }: { params: Promise<{ id: 
               <Avatar className="h-24 w-24">
                 <AvatarImage src={batchmate.currentPhoto || "/placeholder.svg"} alt={batchmate.fullName} />
                 <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                  {batchmate.callingName.charAt(0)}
+                  {batchmate.callingName?.charAt(0) || '?'}
                 </AvatarFallback>
               </Avatar>
               <h3 className="mt-4 text-xl font-semibold text-foreground">{batchmate.fullName}</h3>

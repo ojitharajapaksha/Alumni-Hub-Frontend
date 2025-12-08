@@ -234,7 +234,7 @@ export default function FullViewPage() {
                                 <div className="flex items-center gap-3">
                                   <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                                     <span className="text-sm font-medium text-primary">
-                                      {batchmate.callingName.charAt(0)}
+                                      {batchmate.callingName?.charAt(0) || '?'}
                                     </span>
                                   </div>
                                   <div>

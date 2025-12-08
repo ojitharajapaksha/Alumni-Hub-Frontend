@@ -183,14 +183,14 @@ export default function BatchmatesPage() {
                     filteredBatchmates.slice(0, 20).map((batchmate) => (
                       <TableRow key={batchmate.id} className="hover:bg-secondary/20">
                         <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                              <span className="text-sm font-medium text-primary">
-                                {batchmate.callingName.charAt(0)}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground">{batchmate.fullName}</p>
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                <span className="text-sm font-medium text-primary">
+                                  {batchmate.callingName?.charAt(0) || '?'}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground">{batchmate.fullName}</p>
                               <p className="text-xs text-muted-foreground">
                                 {batchmate.callingName}
                                 {batchmate.nickName && ` • "${batchmate.nickName}"`}

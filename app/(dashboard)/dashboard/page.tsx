@@ -168,12 +168,12 @@ export default function DashboardPage() {
                 recentBatchmates.map((batchmate) => (
                   <div key={batchmate.id} className="flex items-center gap-4">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary">{batchmate.callingName.charAt(0)}</span>
+                      <span className="text-sm font-medium text-primary">{batchmate.callingName?.charAt(0) || '?'}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{batchmate.fullName}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{batchmate.fullName || 'N/A'}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {batchmate.field} • {batchmate.country || "Unknown location"}
+                        {batchmate.field || 'N/A'} • {batchmate.country || "Unknown location"}
                       </p>
                     </div>
                     <div className="text-xs text-muted-foreground">{batchmate.workingPlace || "N/A"}</div>

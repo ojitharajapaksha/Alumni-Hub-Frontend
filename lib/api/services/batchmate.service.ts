@@ -45,19 +45,30 @@ export const batchmateService = {
     }
 
     const response = await apiClient.get("/batchmates", { params })
-    // Transform Strapi v5 format: { data: [{id, attributes}] } to flat objects
-    return response.data.data.map((item: any) => ({
-      id: item.id,
-      ...item.attributes
-    }))
+    // Handle both Strapi formats: flat or with attributes
+    return response.data.data.map((item: any) => {
+      // If item already has the fields directly (flat format)
+      if (item.callingName !== undefined) {
+        return item
+      }
+      // If item has attributes wrapper
+      return {
+        id: item.id,
+        ...item.attributes
+      }
+    })
   },
 
   async getById(id: string) {
     const response = await apiClient.get(`/batchmates/${id}`, {
       params: { populate: ["universityPhoto", "currentPhoto"] },
     })
-    // Transform Strapi v5 format: { data: {id, attributes} } to flat object
     const item = response.data.data
+    // If item already has the fields directly (flat format)
+    if (item.callingName !== undefined) {
+      return item
+    }
+    // If item has attributes wrapper
     return {
       id: item.id,
       ...item.attributes
@@ -66,8 +77,12 @@ export const batchmateService = {
 
   async create(data: BatchmateData) {
     const response = await apiClient.post("/batchmates", { data })
-    // Transform Strapi v5 format: { data: {id, attributes} } to flat object
     const item = response.data.data
+    // If item already has the fields directly (flat format)
+    if (item.callingName !== undefined) {
+      return item
+    }
+    // If item has attributes wrapper
     return {
       id: item.id,
       ...item.attributes
@@ -76,8 +91,12 @@ export const batchmateService = {
 
   async update(id: string, data: Partial<BatchmateData>) {
     const response = await apiClient.put(`/batchmates/${id}`, { data })
-    // Transform Strapi v5 format: { data: {id, attributes} } to flat object
     const item = response.data.data
+    // If item already has the fields directly (flat format)
+    if (item.callingName !== undefined) {
+      return item
+    }
+    // If item has attributes wrapper
     return {
       id: item.id,
       ...item.attributes
