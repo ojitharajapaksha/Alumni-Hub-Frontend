@@ -4,7 +4,7 @@ import { type User, type Batchmate, ENGINEERING_FIELDS, COUNTRIES } from "./type
 export const mockUsers: User[] = [
   {
     id: "1",
-    email: "superadmin@alumni.edu",
+    email: "superadmin@alumni.com",
     username: "superadmin",
     role: "super_admin",
     createdAt: "2024-01-01T00:00:00Z",

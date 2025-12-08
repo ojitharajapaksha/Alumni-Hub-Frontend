@@ -126,11 +126,11 @@ export default function LoginPage() {
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between items-center p-2 rounded-lg bg-secondary/50">
                   <span className="text-muted-foreground">Super Admin:</span>
-                  <code className="text-accent">superadmin@alumni.edu / admin123</code>
+                  <code className="text-accent">superadmin@alumni.com / admin123</code>
                 </div>
                 <div className="flex justify-between items-center p-2 rounded-lg bg-secondary/50">
                   <span className="text-muted-foreground">Field Admin:</span>
-                  <code className="text-accent">computeradmin@alumni.edu / admin123</code>
+                  <code className="text-accent">computeradmin@alumni.com / admin123</code>
                 </div>
               </div>
             </div>

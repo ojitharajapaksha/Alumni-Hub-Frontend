@@ -33,21 +33,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     // Mock users for demo
-    const mockAuthUsers: Record<string, { password: string; user: AuthUser }> = {
-      "superadmin@alumni.edu": {
+    const mockCredentials: Record<string, { password: string; user: User }> = {
+      "superadmin@alumni.com": {
         password: "admin123",
         user: {
           id: "1",
-          email: "superadmin@alumni.edu",
+          email: "superadmin@alumni.com",
           username: "superadmin",
           role: "super_admin",
         },
       },
-      "computeradmin@alumni.edu": {
+      "computeradmin@alumni.com": {
         password: "admin123",
         user: {
           id: "field-admin-3",
-          email: "computeradmin@alumni.edu",
+          email: "computeradmin@alumni.com",
           username: "computeradmin",
           role: "field_admin",
           assignedField: "Computer",
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     }
 
-    const authData = mockAuthUsers[email]
+    const authData = mockCredentials[email]
     if (authData && authData.password === password) {
       setUser(authData.user)
       localStorage.setItem("alumni_hub_user", JSON.stringify(authData.user))

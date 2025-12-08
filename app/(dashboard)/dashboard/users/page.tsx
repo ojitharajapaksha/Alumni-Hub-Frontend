@@ -2,10 +2,10 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { mockUsers } from "@/lib/mock-data"
 import { type User, ENGINEERING_FIELDS, type EngineeringField } from "@/lib/types"
+import { userService } from "@/lib/api/services/user.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,15 +30,18 @@ import { redirect } from "next/navigation"
 export default function UsersPage() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [users, setUsers] = useState<User[]>(mockUsers)
+  const [users, setUsers] = useState<User[]>([])
+  const [roles, setRoles] = useState<any[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isFetching, setIsFetching] = useState(true)
   const [editingUser, setEditingUser] = useState<User | null>(null)
 
   const [formData, setFormData] = useState({
     email: "",
     username: "",
     password: "",
+    role: "",
     assignedField: "" as EngineeringField | "",
   })
 
@@ -46,6 +49,32 @@ export default function UsersPage() {
   if (user?.role !== "super_admin") {
     redirect("/dashboard")
   }
+
+  // Fetch users and roles on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsFetching(true)
+        const [usersData, rolesData] = await Promise.all([
+          userService.getAll(),
+          userService.getRoles(),
+        ])
+        setUsers(usersData)
+        setRoles(rolesData)
+      } catch (error) {
+        console.error("Error fetching data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load users. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsFetching(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const fieldAdmins = users.filter((u) => u.role === "field_admin")
   const superAdmins = users.filter((u) => u.role === "super_admin")
@@ -57,6 +86,7 @@ export default function UsersPage() {
         email: userToEdit.email,
         username: userToEdit.username,
         password: "",
+        role: userToEdit.role?.id?.toString() || "",
         assignedField: userToEdit.assignedField || "",
       })
     } else {
@@ -65,6 +95,7 @@ export default function UsersPage() {
         email: "",
         username: "",
         password: "",
+        role: "",
         assignedField: "",
       })
     }
@@ -75,55 +106,71 @@ export default function UsersPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      if (editingUser) {
+        const updateData: any = {
+          email: formData.email,
+          username: formData.username,
+          role: formData.role,
+          assignedField: formData.assignedField || null,
+        }
+        if (formData.password) {
+          updateData.password = formData.password
+        }
 
-    if (editingUser) {
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === editingUser.id
-            ? {
-                ...u,
-                email: formData.email,
-                username: formData.username,
-                assignedField: formData.assignedField as EngineeringField,
-              }
-            : u,
-        ),
-      )
-      toast({
-        title: "User updated",
-        description: `${formData.username} has been updated successfully.`,
-      })
-    } else {
-      const newUser: User = {
-        id: `new-${Date.now()}`,
-        email: formData.email,
-        username: formData.username,
-        role: "field_admin",
-        assignedField: formData.assignedField as EngineeringField,
-        createdAt: new Date().toISOString(),
+        const updatedUser = await userService.update(editingUser.id, updateData)
+        setUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)))
+        toast({
+          title: "User updated",
+          description: `${formData.username} has been updated successfully.`,
+        })
+      } else {
+        if (!formData.password) {
+          throw new Error("Password is required for new users")
+        }
+        const newUser = await userService.create({
+          email: formData.email,
+          username: formData.username,
+          password: formData.password,
+          role: formData.role,
+          assignedField: formData.assignedField || null,
+        })
+        setUsers((prev) => [...prev, newUser])
+        toast({
+          title: "User created",
+          description: `${formData.username} has been added successfully.`,
+        })
       }
-      setUsers((prev) => [...prev, newUser])
-      toast({
-        title: "User created",
-        description: `${formData.username} has been added as a Field Admin.`,
-      })
-    }
 
-    setIsLoading(false)
-    setIsDialogOpen(false)
+      setIsDialogOpen(false)
+    } catch (error: any) {
+      console.error("Error saving user:", error)
+      toast({
+        title: "Error",
+        description: error.response?.data?.error?.message || "Failed to save user. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleDelete = async (userToDelete: User) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id))
-    toast({
-      title: "User deleted",
-      description: `${userToDelete.username} has been removed.`,
-    })
+    try {
+      await userService.delete(userToDelete.id)
+      setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id))
+      toast({
+        title: "User deleted",
+        description: `${userToDelete.username} has been removed.`,
+      })
+    } catch (error) {
+      console.error("Error deleting user:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete user. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Check which fields are already assigned
@@ -146,9 +193,9 @@ export default function UsersPage() {
           <DialogContent className="bg-card border-border">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>{editingUser ? "Edit Field Admin" : "Add Field Admin"}</DialogTitle>
+                <DialogTitle>{editingUser ? "Edit User" : "Add User"}</DialogTitle>
                 <DialogDescription>
-                  {editingUser ? "Update the field admin details below." : "Create a new field admin account."}
+                  {editingUser ? "Update the user details below." : "Create a new user account."}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -173,30 +220,46 @@ export default function UsersPage() {
                     required
                   />
                 </div>
-                {!editingUser && (
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                      className="bg-input border-border"
-                      required
-                    />
-                  </div>
-                )}
                 <div className="space-y-2">
-                  <Label htmlFor="field">Assigned Field</Label>
+                  <Label htmlFor="password">Password {editingUser && "(leave blank to keep unchanged)"}</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                    className="bg-input border-border"
+                    required={!editingUser}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
+                    required
+                  >
+                    <SelectTrigger className="bg-input border-border">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {roles.map((role) => (
+                        <SelectItem key={role.id} value={role.id.toString()}>
+                          {role.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="field">Assigned Field (for Field Admins)</Label>
                   <Select
                     value={formData.assignedField}
                     onValueChange={(value) =>
                       setFormData((prev) => ({ ...prev, assignedField: value as EngineeringField }))
                     }
-                    required
                   >
                     <SelectTrigger className="bg-input border-border">
-                      <SelectValue placeholder="Select field" />
+                      <SelectValue placeholder="Select field (optional)" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border-border">
                       {ENGINEERING_FIELDS.map((field) => (
@@ -243,23 +306,37 @@ export default function UsersPage() {
               <Shield className="h-5 w-5 text-primary" />
               Super Admins
             </CardTitle>
-            <CardDescription>Users with full system access ({superAdmins.length})</CardDescription>
+            <CardDescription>
+              {isFetching ? "Loading..." : `Users with full system access (${superAdmins.length})`}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {superAdmins.map((admin) => (
-                <div key={admin.id} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Shield className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{admin.username}</p>
-                    <p className="text-sm text-muted-foreground">{admin.email}</p>
-                  </div>
-                  <Badge className="bg-primary/10 text-primary border-primary/30">Super Admin</Badge>
-                </div>
-              ))}
-            </div>
+            {isFetching ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {superAdmins.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No super admins found</p>
+                ) : (
+                  superAdmins.map((admin) => (
+                    <div key={admin.id} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Shield className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground">{admin.username}</p>
+                        <p className="text-sm text-muted-foreground">{admin.email}</p>
+                      </div>
+                      <Badge className="bg-primary/10 text-primary border-primary/30">
+                        {admin.role?.name || "Super Admin"}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -270,27 +347,37 @@ export default function UsersPage() {
               <Users className="h-5 w-5 text-accent" />
               Field Admin Overview
             </CardTitle>
-            <CardDescription>Field assignments ({fieldAdmins.length} of 9 assigned)</CardDescription>
+            <CardDescription>
+              {isFetching
+                ? "Loading..."
+                : `Field assignments (${fieldAdmins.length} of ${ENGINEERING_FIELDS.length} assigned)`}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-2">
-              {ENGINEERING_FIELDS.map((field) => {
-                const assigned = fieldAdmins.find((u) => u.assignedField === field)
-                return (
-                  <div
-                    key={field}
-                    className={`p-3 rounded-lg text-center ${
-                      assigned ? "bg-accent/10 border border-accent/30" : "bg-secondary/30 border border-transparent"
-                    }`}
-                  >
-                    <p className="text-xs font-medium">{field}</p>
-                    <p className={`text-xs mt-1 ${assigned ? "text-accent" : "text-muted-foreground"}`}>
-                      {assigned ? "Assigned" : "Vacant"}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
+            {isFetching ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {ENGINEERING_FIELDS.map((field) => {
+                  const assigned = fieldAdmins.find((u) => u.assignedField === field)
+                  return (
+                    <div
+                      key={field}
+                      className={`p-3 rounded-lg text-center ${
+                        assigned ? "bg-accent/10 border border-accent/30" : "bg-secondary/30 border border-transparent"
+                      }`}
+                    >
+                      <p className="text-xs font-medium">{field}</p>
+                      <p className={`text-xs mt-1 ${assigned ? "text-accent" : "text-muted-foreground"}`}>
+                        {assigned ? "Assigned" : "Vacant"}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -298,78 +385,97 @@ export default function UsersPage() {
       {/* Field Admins Table */}
       <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle>Field Administrators</CardTitle>
-          <CardDescription>Manage individual field admin accounts</CardDescription>
+          <CardTitle>All Users</CardTitle>
+          <CardDescription>Manage user accounts and permissions</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border border-border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-secondary/30 hover:bg-secondary/30">
-                  <TableHead className="font-semibold">User</TableHead>
-                  <TableHead className="font-semibold">Email</TableHead>
-                  <TableHead className="font-semibold">Assigned Field</TableHead>
-                  <TableHead className="font-semibold">Created</TableHead>
-                  <TableHead className="text-right font-semibold">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {fieldAdmins.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center">
-                      <p className="text-muted-foreground">No field admins yet</p>
-                    </TableCell>
+          {isFetching ? (
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="rounded-lg border border-border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-secondary/30 hover:bg-secondary/30">
+                    <TableHead className="font-semibold">User</TableHead>
+                    <TableHead className="font-semibold">Email</TableHead>
+                    <TableHead className="font-semibold">Role</TableHead>
+                    <TableHead className="font-semibold">Assigned Field</TableHead>
+                    <TableHead className="font-semibold">Created</TableHead>
+                    <TableHead className="text-right font-semibold">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  fieldAdmins.map((admin) => (
-                    <TableRow key={admin.id} className="hover:bg-secondary/20">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-full bg-accent/10 flex items-center justify-center">
-                            <span className="text-sm font-medium text-accent">
-                              {admin.username.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <span className="font-medium">{admin.username}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{admin.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="border-accent/30 text-accent bg-accent/5">
-                          {admin.assignedField}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(admin.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-popover border-border">
-                            <DropdownMenuItem onClick={() => handleOpenDialog(admin)} className="cursor-pointer">
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(admin)}
-                              className="cursor-pointer text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                </TableHeader>
+                <TableBody>
+                  {users.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-32 text-center">
+                        <p className="text-muted-foreground">No users found</p>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ) : (
+                    users.map((userItem) => (
+                      <TableRow key={userItem.id} className="hover:bg-secondary/20">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-full bg-accent/10 flex items-center justify-center">
+                              <span className="text-sm font-medium text-accent">
+                                {userItem.username.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <span className="font-medium">{userItem.username}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{userItem.email}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5">
+                            {userItem.role?.name || "User"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {userItem.assignedField ? (
+                            <Badge variant="outline" className="border-accent/30 text-accent bg-accent/5">
+                              {userItem.assignedField}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">N/A</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {userItem.createdAt ? new Date(userItem.createdAt).toLocaleDateString() : "N/A"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-popover border-border">
+                              <DropdownMenuItem
+                                onClick={() => handleOpenDialog(userItem)}
+                                className="cursor-pointer"
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(userItem)}
+                                className="cursor-pointer text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

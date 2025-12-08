@@ -33,12 +33,12 @@ export interface UserResponse {
 
 export const userService = {
   async getAll(): Promise<UserResponse[]> {
-    const response = await apiClient.get("/users")
+    const response = await apiClient.get("/user-management/all")
     return response.data
   },
 
   async getById(id: number): Promise<UserResponse> {
-    const response = await apiClient.get(`/users/${id}`)
+    const response = await apiClient.get(`/user-management/${id}`)
     return response.data
   },
 
@@ -49,7 +49,7 @@ export const userService = {
     role: number
     assignedField?: string
   }): Promise<UserResponse> {
-    const response = await apiClient.post("/users", data)
+    const response = await apiClient.post("/user-management/create", data)
     return response.data
   },
 
@@ -63,16 +63,16 @@ export const userService = {
       assignedField: string
     }>
   ): Promise<UserResponse> {
-    const response = await apiClient.put(`/users/${id}`, data)
+    const response = await apiClient.put(`/user-management/update/${id}`, data)
     return response.data
   },
 
   async delete(id: number): Promise<void> {
-    await apiClient.delete(`/users/${id}`)
+    await apiClient.delete(`/user-management/delete/${id}`)
   },
 
   async getRoles(): Promise<{ id: number; name: string; type: string }[]> {
-    const response = await apiClient.get("/users-permissions/roles")
-    return response.data.roles
+    const response = await apiClient.get("/user-management/roles")
+    return response.data
   },
 }
