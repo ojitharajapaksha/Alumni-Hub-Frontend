@@ -68,8 +68,9 @@ export function BatchmateForm({ initialData }: BatchmateFormProps) {
 
     try {
       if (initialData) {
-        // Update existing batchmate
-        await batchmateService.update(initialData.id, formData)
+        // Update existing batchmate - use documentId for Strapi v5
+        const idToUse = initialData.documentId || initialData.id
+        await batchmateService.update(idToUse, formData)
         sonnerToast.success("Batchmate updated", {
           description: `${formData.fullName} has been updated successfully.`,
         })

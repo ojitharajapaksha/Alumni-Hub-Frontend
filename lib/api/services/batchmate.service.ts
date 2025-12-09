@@ -49,28 +49,38 @@ export const batchmateService = {
     return response.data.data.map((item: any) => {
       // If item already has the fields directly (flat format)
       if (item.callingName !== undefined) {
-        return item
+        return {
+          ...item,
+          // Ensure documentId is included for v5 compatibility
+          documentId: item.documentId || item.id
+        }
       }
       // If item has attributes wrapper
       return {
         id: item.id,
+        documentId: item.documentId || item.id,
         ...item.attributes
       }
     })
   },
 
   async getById(id: string) {
+    // Use the provided id (which should be documentId in Strapi v5)
     const response = await apiClient.get(`/batchmates/${id}`, {
       params: { populate: ["universityPhoto", "currentPhoto"] },
     })
     const item = response.data.data
     // If item already has the fields directly (flat format)
     if (item.callingName !== undefined) {
-      return item
+      return {
+        ...item,
+        documentId: item.documentId || item.id
+      }
     }
     // If item has attributes wrapper
     return {
       id: item.id,
+      documentId: item.documentId || item.id,
       ...item.attributes
     }
   },

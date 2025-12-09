@@ -319,7 +319,7 @@ export default function GlobalSearchPage() {
                             <TableCell className="text-right">
                               {canEditBatchmate(batchmate.field) && (
                                 <Button variant="ghost" size="sm" asChild>
-                                  <Link href={`/dashboard/batchmates/${batchmate.id}/edit`}>
+                                  <Link href={`/dashboard/batchmates/${batchmate.documentId || batchmate.id}/edit`}>
                                     <Edit className="h-4 w-4" />
                                   </Link>
                                 </Button>

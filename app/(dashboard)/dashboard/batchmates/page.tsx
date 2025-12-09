@@ -218,13 +218,13 @@ export default function BatchmatesPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-popover border-border">
                               <DropdownMenuItem asChild className="cursor-pointer">
-                                <Link href={`/dashboard/batchmates/${batchmate.id}`}>
+                                <Link href={`/dashboard/batchmates/${batchmate.documentId || batchmate.id}`}>
                                   <Eye className="mr-2 h-4 w-4" />
                                   View
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild className="cursor-pointer">
-                                <Link href={`/dashboard/batchmates/${batchmate.id}/edit`}>
+                                <Link href={`/dashboard/batchmates/${batchmate.documentId || batchmate.id}/edit`}>
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit
                                 </Link>

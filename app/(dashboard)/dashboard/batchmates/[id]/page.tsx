@@ -1,17 +1,45 @@
 "use client"
 
-import { use } from "react"
+import { use, useEffect, useState } from "react"
 import Link from "next/link"
-import { mockBatchmates } from "@/lib/mock-data"
+import { batchmateService } from "@/lib/api/services/batchmate.service"
+import { type Batchmate } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ArrowLeft, Edit, Mail, Phone, MapPin, Building2, Globe } from "lucide-react"
+import { toast } from "sonner"
 
 export default function BatchmateDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const batchmate = mockBatchmates.find((b) => b.id === id)
+  const [batchmate, setBatchmate] = useState<Batchmate | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchBatchmate = async () => {
+      try {
+        setIsLoading(true)
+        const data = await batchmateService.getById(id)
+        setBatchmate(data)
+      } catch (error) {
+        console.error("Error fetching batchmate:", error)
+        toast.error("Failed to load batchmate details")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchBatchmate()
+  }, [id])
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    )
+  }
 
   if (!batchmate) {
     return (
@@ -37,7 +65,7 @@ export default function BatchmateDetailPage({ params }: { params: Promise<{ id: 
           </Link>
         </Button>
         <Button asChild className="bg-primary hover:bg-primary/90">
-          <Link href={`/dashboard/batchmates/${id}/edit`}>
+          <Link href={`/dashboard/batchmates/${batchmate.documentId || batchmate.id}/edit`}>
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Link>

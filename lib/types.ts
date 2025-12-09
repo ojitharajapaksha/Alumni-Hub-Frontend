@@ -40,6 +40,7 @@ export interface User {
 
 export interface Batchmate {
   id: string
+  documentId?: string
   callingName: string
   fullName: string
   whatsappMobile: string
